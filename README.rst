@@ -2,6 +2,8 @@
 Virlum 
 ======
 
-* A guide for directing you to the right car  
+*  Used Car Buying Guide
+
+Website for recommended used cars to you based on specific criteria  
 
 To be continued...
