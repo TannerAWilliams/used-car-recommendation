@@ -1,8 +1,13 @@
-# Directories
+# Setup folders
+.vscode
+env/
+
+# Image Directories
 AverageCarPhotos/
 VehiclePhotos/
 
 # log files
 app.log
 
+# pickle file
 *.pickle
