@@ -330,7 +330,7 @@ def get_category(car_name):
     return cars_to_categories[car_name]
 
 
-def set_car_to_overall_rating(filenames_list):
+def convert_overall_car_images_to_text(filenames_list):
     print("Converting Overall Rating Images to Text")
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -390,19 +390,13 @@ def filter_description_reliability_score(car_text):
 
     return description, reliability_score
 
-    # TODO. Insert a row per generation or per year
-     # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, car_rating_average REAL, manufacturer_quality_index_rating REAL
-    # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufacturer_rating)
-   
     
-    # Todo make sure this works by inserting data into text file
-    # then store values into database
 
 # TODO
 # Scans words from image
 # Return a list of lists.
 #   i.e. Each list with be each individual cars relevant information
-def ocr_core(filenames_list):
+def convert_car_generations_images_to_text(filenames_list):
     print("Converting Images to Text")
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -410,12 +404,21 @@ def ocr_core(filenames_list):
         try:
             image_path = os.getcwd() + '\\' + image
             text = pytesseract.image_to_string(Image.open(image_path))
-            formatted_data = get_formatted_data(text)
+            # formatted_data = get_formatted_data(text)
+            # insert_data_to_table()
             logging.info("%s: %s", image_path, text)
         except Exception as e:
             logging.error(
                 "Unable to convert image:%s to text. Exception: %s", image, str(e))
 
+#def get_formatted_data(text):
+
+#def insert_data_to_table():   
+
+    # TODO. Insert a row per generation or per year
+        # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, car_rating_average REAL, manufacturer_quality_index_rating REAL
+    # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufacturer_rating)
+    
 
 if __name__ == "__main__":
     logging.basicConfig(filename="logs/appplication.log", filemode='w', level=logging.INFO)
@@ -429,9 +432,9 @@ if __name__ == "__main__":
         name_of_car_generations_images = get_saved_car_images('saved_car_generations_images.json')
 
     # pytersseract 
-    set_car_to_overall_rating(name_of_overall_car_images)
-    
-    # ocr_core(name_of_car_generations_images)
+    convert_overall_car_images_to_text(name_of_overall_car_images)
+    convert_car_generations_images_to_text(name_of_car_generations_images)
+   
 
 
 
