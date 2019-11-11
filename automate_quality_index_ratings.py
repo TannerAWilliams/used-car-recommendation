@@ -1,5 +1,5 @@
 # TODO
-# 1. Get/Retrieve/e Average Relibility Score of Vehicle
+# 1. Get/Retrieve/e Average Relibility Score of Car
 # 2. Get Manufacter Relibility Score
 # 3. Image to Text    
     # a. Format the Text Data
@@ -22,9 +22,9 @@ The Quality Index Rating (QIR)
 
 Offers an overall score based on the frequency of powertrain issues,
 the mileage distribution of when those issues take place,
-and the vehicle age at the time of trade-in.
+and the car age at the time of trade-in.
 
-You can think of it as a weighted average where we look at a number of factors for a given vehicle model,
+You can think of it as a weighted average where we look at a number of factors for a given car model,
 and then get a single value indicating it’s overall long-term reliability.
 '''
 
@@ -43,9 +43,9 @@ import re
 # import colorama
 
 def delete_all_files():
-    # delete vehicle folder
-    shutil.rmtree("Vehicles", ignore_errors=True)
-    shutil.rmtree("AverageCar", ignore_errors=True)
+    # delete car folders
+    shutil.rmtree("CarGenerationsImages", ignore_errors=True)
+    shutil.rmtree("OverallCarImages", ignore_errors=True)
     # delete pickle files
     top = os.getcwd()
     for root, dirs, files in os.walk(top, topdown=False):
@@ -110,17 +110,17 @@ def save_new_images():
     # Ask your if they want separate folder for each manufactuer
     #should_create_separate_folders = ask_for_user_response()
     create_folders = False
-    # saved images by getting makes, models, and associated images of vehicles
-    saved_average_images, saved_vehicle_images   = save_quality_index_rating_images(create_folders)
+    # saved images by getting makes, models, and associated images of cars
+    saved_average_images, saved_car_images   = save_quality_index_rating_images(create_folders)
     with open('saved_images_names.json', 'w') as write_file:
         json.dump(saved_average_images, write_file)
-        json.dump(saved_vehicle_images, write_file)
-        return saved_average_images, saved_vehicle_images
+        json.dump(saved_car_images, write_file)
+        return saved_average_images, saved_car_images
 
 
 def ask_for_user_response():
     response = str(input(
-        "Would you like to save the vehicle quality index rating images into separate folders by make? [Y / n]: ")).lower()
+        "Would you like to save the car quality index rating images into separate folders by make? [Y / n]: ")).lower()
     create_folders = False
     if response in ("t", "true", "y", "yes"):
         create_folders = True
@@ -163,16 +163,16 @@ def save_quality_index_rating_images(have_folders):
     makes_models = get_makes_to_models()
 
     # Create folders
-    directories = ['AverageCar', 'Vehicles']
+    directories = ['OverallCarImages', 'CarGenerationsImages']
     create_folders(directories)
 
     print("Retrieving Images...")
     saved_averages = list()
-    saved_vehicles = list()
+    saved_cars = list()
     for make, models in makes_models.items():
         print('\t', make)
         for model in models:
-            # Get url of photos
+            # Get url of images
             average_car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIRGeneration.png?v=4'
             car_generations_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png?v=4'
             if(make == "ISUZU"):
@@ -181,17 +181,17 @@ def save_quality_index_rating_images(have_folders):
 
             # Get name of file and path
             average_car_filename = f'{directories[0]}\{make}_{model}.png'
-            vehicle_filename = f'{directories[1]}\{make}_{model}.png'
+            car_filename = f'{directories[1]}\{make}_{model}.png'
 
             # save images based on url and filename
-            average_car_image_saved = save_image(average_car_png_url, vehicle_filename)
-            vehicle_image_saved = save_image(car_generations_png_url, average_car_filename)
+            average_car_image_saved = save_image(average_car_png_url, car_filename)
+            car_image_saved = save_image(car_generations_png_url, average_car_filename)
             
             if(average_car_image_saved == True):
                saved_averages.append(average_car_image_saved)
-            if(vehicle_image_saved == True):
-                saved_vehicles.append(vehicle_filename)
-    return saved_averages, saved_vehicles
+            if(car_image_saved == True):
+                saved_cars.append(car_filename)
+    return saved_averages, saved_cars
 
 
 # InsufficientData, Chronic Reliability Issues, Well Below Average, Below Average
@@ -287,13 +287,13 @@ def get_makes_to_models():
 # The method returns a dictionary with every car nd their corresponding category
 def get_categories_to_subdirectories():
     try:
-        with open('vehicle_categories_to_subdirectories.json', 'r') as read_file:
-            vehicle_categories_to_subdirectories = json.load(read_file)
-            logging.info('List of Vehicle Categories - %s.',
-                         vehicle_categories_to_subdirectories)
-            return vehicle_categories_to_subdirectories
+        with open('car_categories_to_subdirectories.json', 'r') as read_file:
+            car_categories_to_subdirectories = json.load(read_file)
+            logging.info('List of Car Categories - %s.',
+                         car_categories_to_subdirectories)
+            return car_categories_to_subdirectories
     except FileNotFoundError:
-        vehicle_categories_to_subdirectories = dict()
+        car_categories_to_subdirectories = dict()
         url = 'http://www.dashboard-light.com/'
         page = requests.get(url)
         soup = BeautifulSoup(page.text, "html.parser")
@@ -306,28 +306,28 @@ def get_categories_to_subdirectories():
                         subdirectory = attribute[18:index-6]
                         category = attribute[index+1:-4]
                         logging.debug("Category: %s", category)
-                        vehicle_categories_to_subdirectories[category] = subdirectory
+                        car_categories_to_subdirectories[category] = subdirectory
         except Exception as e:
             logging.error(
-                "Unable to retrieve vehicle categories. Error Message: %s", str(e))
+                "Unable to retrieve car categories. Error Message: %s", str(e))
 
-        with open('vehicle_categories_to_subdirectories.json', 'w') as write_file:
-            json.dump(vehicle_categories_to_subdirectories, write_file)
-            return vehicle_categories_to_subdirectories
+        with open('car.json', 'w') as write_file:
+            json.dump(car_categories_to_subdirectories, write_file)
+            return car_categories_to_subdirectories
 
 
-# This section return a dictionary for each model and its corresponding vehicle category
-def get_vehicles_to_categories():
+# This section return a dictionary for each model and its corresponding car category
+def get_cars_to_categories():
     try:
-        with open('vehicles_to_categories.json', 'r') as read_file:
-            vehicles_to_categories = json.load(read_file)
+        with open('cars_to_categories.json', 'r') as read_file:
+            cars_to_categories = json.load(read_file)
             logging.info(
-                'Dictionary of Vehicle to Categories - %s.', vehicles_to_categories)
-            return vehicles_to_categories
+                'Dictionary of Cars to Categories - %s.', cars_to_categories)
+            return cars_to_categories
     except FileNotFoundError:
         # list of all the makes
         categories_to_subdirectories = get_categories_to_subdirectories()
-        vehicles_to_categories = dict()
+        cars_to_categories = dict()
         # go through each make and parse their specific web page
         for category, subdirectory in categories_to_subdirectories.items():
             url = f'http://www.dashboard-light.com/reports/{subdirectory}.html'
@@ -338,27 +338,27 @@ def get_vehicles_to_categories():
                     attribute = str(a)
                     index = attribute.find('>')
                     if(index != -1):
-                        vehicle = attribute[index+1:-4].upper()
-                        logging.debug("Vehicle: %s", vehicle)
-                        vehicles_to_categories[vehicle] = category
+                        car = attribute[index+1:-4].upper()
+                        logging.debug("Car: %s", car)
+                        cars_to_categories[car] = category
             except Exception as e:
                 logging.error(
-                    "Unable to retrieve category for %s. Error Message: %s", vehicle, str(e))
-        with open("vehicles_to_categories.json", "w") as write_file:
-            json.dump(vehicles_to_categories, write_file)
-            return vehicles_to_categories
+                    "Unable to retrieve category for %s. Error Message: %s", car, str(e))
+        with open("cars_to_categories.json", "w") as write_file:
+            json.dump(cars_to_categories, write_file)
+            return cars_to_categories
 
-def get_category(vehicle_name):
+def get_category(car_name):
     try:
-        with open('vehicles_to_categories.json', 'r') as read_file:
-            vehicles_to_categories = json.load(read_file)
+        with open('cars_to_categories.json', 'r') as read_file:
+            cars_to_categories = json.load(read_file)
     except FileNotFoundError:
-        vehicles_to_categories = get_vehicles_to_categories();
+        cars_to_categories = get_cars_to_categories();
     
-    return vehicles_to_categories[vehicle_name]
+    return cars_to_categories[car_name]
 
 
-def set_vehicle_to_average_rating(filenames_list):
+def set_car_to_average_rating(filenames_list):
     print("Converting Images to Text")
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -371,33 +371,33 @@ def set_vehicle_to_average_rating(filenames_list):
             logging.info("%s: %s", image_path, text)
         except Exception as e:
             logging.error(
-                "Unable to convert photo:%s to text. Exception: %s", str(e))
+                "Unable to convert image:%s to text. Exception: %s", str(e))
 
 ##TODO
-def extract_text(average_vehicle_text):
+def extract_text(average_car_text):
     make = str()
     model = str()
     make_model = str()
-    vehicle_average_reliability_score = 0
+    car_average_reliability_score = 0
     
     #TODO
-    # vehicle_rating_average
+    # car_rating_average
     # manufacturer_quality_index_rating (DICTIONARY: KEY make, VALUE score) 
 
     # Convert strings to list. Then remove blank strings and spaces from list.
-    lines = average_vehicle_text.splitlines()
+    lines = average_car_text.splitlines()
     lines = list(filter(lambda word: word != '', lines))
     lines = list(filter(lambda word: word != ' ', lines))
 
-    # Go through each line of vehicle text and extract relevant data
-    vehicle_name = lines[0]
-    make = vehicle_name.split()[0]
-    model = vehicle_name.split()[1]
+    # Go through each line of car text and extract relevant data
+    car_name = lines[0]
+    make = car_name.split()[0]
+    model = car_name.split()[1]
 
 # TODO
 # Scans words from image
 # Return a list of lists.
-#   i.e. Each list with be each individual vehicles relevant information
+#   i.e. Each list with be each individual cars relevant information
 def ocr_core(filenames_list):
     print("Converting Images to Text")
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -410,42 +410,42 @@ def ocr_core(filenames_list):
             logging.info("%s: %s", image_path, text)
         except Exception as e:
             logging.error(
-                "Unable to convert photo:%s to text. Exception: %s", image, str(e))
+                "Unable to convert image:%s to text. Exception: %s", image, str(e))
 
 
 
 # TODO - Create a fuction that text the pytesseract text and format is to a list
-def get_formatted_data(vehicle_text):
+def get_formatted_data(car_text):
     years = list()
     reliability_scores = list()
     descriptions = list()
     make = str()
     model = str()
-    vehicle_category = str()
-    vehicle_average_reliability_score = str()
+    car_category = str()
+    car_average_reliability_score = str()
     manufacturer_rating = str()
     
     #TODO
-    # vehicle_rating_average
+    # car_rating_average
     # manufacturer_quality_index_rating (DICTIONARY: KEY make, VALUE score) 
 
     # Convert strings to list. Then remove blank strings and spaces from list.
-    lines = vehicle_text.splitlines()
+    lines = car_text.splitlines()
     lines = list(filter(lambda word: word != '', lines))
     lines = list(filter(lambda word: word != ' ', lines))
 
-    # Go through each line of vehicle text and extract relevant data
-    vehicle_name = lines[0]
-    make = vehicle_name.split()[0]
-    model = vehicle_name.split()[1]
-    vehicle_category = get_category(vehicle_name.upper()) #IMPROVEMENT: Make categories, make model, global variables. Look about namespaces in python
+    # Go through each line of car text and extract relevant data
+    car_name = lines[0]
+    make = car_name.split()[0]
+    model = car_name.split()[1]
+    car_category = get_category(car_name.upper()) #IMPROVEMENT: Make categories, make model, global variables. Look about namespaces in python
     #TODO
-    # vehicle_rating_average REAL
+    # car_rating_average REAL
     # manufacturer_quality_index_rating REAL
 
     # TODO determine which info I want to add to database
     for line in lines:
-        # Vehicle Description
+        # Car Description
         if line in get_descriptors():
             descriptions.append(line)
         # Years
@@ -456,11 +456,11 @@ def get_formatted_data(vehicle_text):
         if 'Score' in line:
             score = line[19:]
             reliability_scores.append(score)
-    print(vehicle_name)
+    print(car_name)
 
     # TODO. Insert a row per generation or per year
-     # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, vehicle_rating_average REAL, manufacturer_quality_index_rating REAL
-    # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, vehicle_category, vehicle_average_reliability_score, manufacturer_rating)
+     # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, car_rating_average REAL, manufacturer_quality_index_rating REAL
+    # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufacturer_rating)
    
     
     # Todo make sure this works by inserting data into text file
@@ -472,12 +472,12 @@ if __name__ == "__main__":
 
     should_update = should_update_images()
     if(should_update):
-        name_of_average_images, name_of_vehicle_images = save_new_images()
+        name_of_average_images, name_of_car_images = save_new_images()
     else:
-        name_of_average_images, name_of_vehicle_images = get_saved_images_names()
+        name_of_average_images, name_of_car_images = get_saved_images_names()
 
-    set_vehicle_to_average_rating(name_of_average_images)
-    ocr_core( name_of_vehicle_images)
+    set_car_to_average_rating(name_of_average_images)
+    ocr_core( name_of_car_images)
 
     input('* Finished Press Enter to Close Program *')
 
@@ -493,7 +493,7 @@ if __name__ == "__main__":
 # Make
 # Model Name
 # Description
-# Vehicle Type
+# Car Type
 # Manufactor Score
 #
 
@@ -505,10 +505,10 @@ if __name__ == "__main__":
 # Description
 
 # Each Make of Cars Has a table
-# Table Called - Vehicles By Make
+# Table Called - Cars By Make
 
-# Each Category of vehicles/Size has a table
-# Table Called - Vehicles By Category
+# Each Category of Cars/Size has a table
+# Table Called - Cars By Category
 # Make + Model Name
 # Reliability Score
 # Descriptor
@@ -536,10 +536,10 @@ if __name__ == "__main__":
 # Weighted Product Model
 # TOPSIS
 # Pareto Frontier of Cars
-# QIR of Vehicle
-# Year of Vehicle
-# Mileage of Vehicle
-# Price of Vehicle
+# QIR of Car
+# Year of Car
+# Mileage of Car
+# Price of Car
 
 # pymoo. Last released: Apr 26, 2019
 #
@@ -562,14 +562,14 @@ def create_table():
     conn = sqlite3.connect('cars.db')
     c = conn.cursor()
   
-    c.execute('CREATE TABLE IF NOT EXISTS vehicles(reliability_score REAL, year INTEGER, make TEXT, model TEXT, overview TEXT, category TEXT, manufactor_quality_index_rating REAL )')
-    c.execute("INSERT INTO vehicles VALUES(0.0, 1996, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
-    c.execute("INSERT INTO vehicles VALUES(0.0, 1997, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
-    c.execute("INSERT INTO vehicles VALUES(0.0, 1998, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
-    c.execute("INSERT INTO vehicles VALUES(0.0, 1999, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
-    c.execute("INSERT INTO vehicles VALUES(17.9, 2001, 'Acura', 'CL', 'Well Below Average', 'Mid-size Luxury', 41)")
-    c.execute("INSERT INTO vehicles VALUES(17.9, 2002, 'Acura', 'CL', 'Well Below Average', 'Mid-size Luxury', 41)")
-    c.execute("INSERT INTO vehicles VALUES(17.9, 2003, 'Acura', 'CL', 'Well Below Average', 'Mid-size Luxury', 41)")
+    c.execute('CREATE TABLE IF NOT EXISTS cars(reliability_score REAL, year INTEGER, make TEXT, model TEXT, overview TEXT, category TEXT, manufactor_quality_index_rating REAL )')
+    c.execute("INSERT INTO cars VALUES(0.0, 1996, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
+    c.execute("INSERT INTO cars VALUES(0.0, 1997, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
+    c.execute("INSERT INTO cars VALUES(0.0, 1998, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
+    c.execute("INSERT INTO cars VALUES(0.0, 1999, 'Acura', 'CL', 'Chronic Reliability Issues', 'Mid-size Luxury', 41)")
+    c.execute("INSERT INTO cars VALUES(17.9, 2001, 'Acura', 'CL', 'Well Below Average', 'Mid-size Luxury', 41)")
+    c.execute("INSERT INTO cars VALUES(17.9, 2002, 'Acura', 'CL', 'Well Below Average', 'Mid-size Luxury', 41)")
+    c.execute("INSERT INTO cars VALUES(17.9, 2003, 'Acura', 'CL', 'Well Below Average', 'Mid-size Luxury', 41)")
     
     conn.commit()
     c.close()
@@ -589,7 +589,7 @@ def is_pareto_efficient_dumb(costs):
 #TODO
 #Store values into database
 #car name
-def insert_car_data_into_database(reliability_scores, years, make, model, descriptions, vehicle_category, vehicle_average_reliability_score, manufactor_quality_index_rating):
+def insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufactor_quality_index_rating):
     print("hey")
 '''
 
