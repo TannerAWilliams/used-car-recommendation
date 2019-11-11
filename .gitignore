@@ -3,11 +3,11 @@
 env/
 
 # Image Directories
-AverageCarPhotos/
-VehiclePhotos/
+OverallCarImages/
+CarGenerationsImages/
 
 # log files
-app.log
+logs/
 
 # pickle file
 *.pickle
