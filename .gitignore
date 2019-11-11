@@ -9,5 +9,5 @@ CarGenerationsImages/
 # log files
 logs/
 
-# json file
+# json files
 *.json
