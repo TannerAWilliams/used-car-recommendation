@@ -38,7 +38,6 @@ import logging
 import pytesseract
 import time
 import sqlite3
-import pickle
 import json
 import re
 # import colorama
@@ -51,27 +50,27 @@ def delete_all_files():
     top = os.getcwd()
     for root, dirs, files in os.walk(top, topdown=False):
         for name in files:
-            if(name.endswith(".pickle")):
+            if(name.endswith(".json")):
                 os.remove(os.path.join(root, name))
                 logging.debug('Deleted %s', name)
     
 def should_update_images():
     try:
-        with open('last_modified_date.pickle', 'r') as pickle_in:
-            last_updated_date = pickle.load(pickle_in)
+        with open('last_modified_date.json', 'r') as read_file:
+            last_updated_date = json.load(read_file)
         last_modified_date = get_last_modified_date()
         if last_modified_date != last_updated_date:
             delete_all_files()
-            pickle_out = open('last_modified_date.pickle', 'w')
-            pickle.dump(last_modified_date, pickle_out)
-            pickle_out.close()
+            write_file = open('last_modified_date.json', 'w')
+            json.dump(last_modified_date, write_file)
+            write_file.close()
             return True
         else:
             return False
     except FileNotFoundError:
         last_modified_date = get_last_modified_date()
-        with open('last_modified_date.pickle', 'w') as pickle_out:
-            pickle.dump(last_modified_date, pickle_out)
+        with open('last_modified_date.json', 'w') as write_file:
+            json.dump(last_modified_date, write_file)
             return True
     except Exception as e:
         logging.error(
@@ -113,9 +112,9 @@ def save_new_images():
     create_folders = False
     # saved images by getting makes, models, and associated images of vehicles
     saved_average_images, saved_vehicle_images   = save_quality_index_rating_images(create_folders)
-    with open('saved_images_names.pickle', 'w') as pickle_out:
-        pickle.dump(saved_average_images, pickle_out)
-        pickle.dump(saved_vehicle_images, pickle_out)
+    with open('saved_images_names.json', 'w') as write_file:
+        json.dump(saved_average_images, write_file)
+        json.dump(saved_vehicle_images, write_file)
         return saved_average_images, saved_vehicle_images
 
 
@@ -131,9 +130,9 @@ def ask_for_user_response():
 
 def get_saved_images_names():
     try:
-        with open('saved_images_names.pickle', 'r') as pickle_in:
-            images_names = pickle.load(pickle_in)
-            images_names2 = pickle.load(pickle_in)
+        with open('saved_images_names.json', 'r') as read_file:
+            images_names = json.load(read_file)
+            images_names2 = json.load(read_file)
             return images_names, images_names2
     except Exception as e:
         logging.error(
@@ -205,8 +204,8 @@ def get_descriptors():
 def get_makes():
     print("Getting Makes...")
     try:
-        with open("makes.pickle", "r") as pickle_in:
-            makes = pickle.load(pickle_in)
+        with open("makes.json", "r") as read_file:
+            makes = json.load(read_file)
             logging.info('List of Makes - %s.', makes)
             return makes
     except FileNotFoundError:
@@ -227,8 +226,8 @@ def get_makes():
             logging.error(
                 "Unable to retrieve makes. Error Message: %s", str(e))
 
-        with open("makes.pickle", "w") as pickle_out:
-            pickle.dump(makes, pickle_out)
+        with open("makes.json", "w") as write_file:
+            json.dump(makes, write_file)
             return makes
 
 
@@ -236,8 +235,8 @@ def get_makes():
 def get_makes_to_models():
     print("Getting Models...")
     try:
-        with open("makes_to_models.pickle", "r") as pickle_in:
-            makes_to_models = pickle.load(pickle_in)
+        with open("makes_to_models.json", "r") as read_file:
+            makes_to_models = json.load(read_file)
             logging.info(
                 'Dictionary with Key=Make and Value=Models - %s.', makes_to_models)
             return makes_to_models
@@ -280,16 +279,16 @@ def get_makes_to_models():
             except Exception as e:
                 logging.error(
                     "Unable to get Models. Error Message: %s", str(e))
-        with open('makes_to_models.pickle', 'w') as pickle_out:
-            pickle.dump(makes_to_models, pickle_out)
+        with open('makes_to_models.json', 'w') as write_file:
+            json.dump(makes_to_models, write_file)
             return makes_to_models
 
 
 # The method returns a dictionary with every car nd their corresponding category
 def get_categories_to_subdirectories():
     try:
-        with open('vehicle_categories_to_subdirectories.pickle', 'r') as pickle_in:
-            vehicle_categories_to_subdirectories = pickle.load(pickle_in)
+        with open('vehicle_categories_to_subdirectories.json', 'r') as read_file:
+            vehicle_categories_to_subdirectories = json.load(read_file)
             logging.info('List of Vehicle Categories - %s.',
                          vehicle_categories_to_subdirectories)
             return vehicle_categories_to_subdirectories
@@ -312,16 +311,16 @@ def get_categories_to_subdirectories():
             logging.error(
                 "Unable to retrieve vehicle categories. Error Message: %s", str(e))
 
-        with open('vehicle_categories_to_subdirectories.pickle', 'w') as pickle_out:
-            pickle.dump(vehicle_categories_to_subdirectories, pickle_out)
+        with open('vehicle_categories_to_subdirectories.json', 'w') as write_file:
+            json.dump(vehicle_categories_to_subdirectories, write_file)
             return vehicle_categories_to_subdirectories
 
 
 # This section return a dictionary for each model and its corresponding vehicle category
 def get_vehicles_to_categories():
     try:
-        with open('vehicles_to_categories.pickle', 'r') as pickle_in:
-            vehicles_to_categories = pickle.load(pickle_in)
+        with open('vehicles_to_categories.json', 'r') as read_file:
+            vehicles_to_categories = json.load(read_file)
             logging.info(
                 'Dictionary of Vehicle to Categories - %s.', vehicles_to_categories)
             return vehicles_to_categories
@@ -345,14 +344,14 @@ def get_vehicles_to_categories():
             except Exception as e:
                 logging.error(
                     "Unable to retrieve category for %s. Error Message: %s", vehicle, str(e))
-        with open("vehicles_to_categories.pickle", "w") as pickle_out:
-            pickle.dump(vehicles_to_categories, pickle_out)
+        with open("vehicles_to_categories.json", "w") as write_file:
+            json.dump(vehicles_to_categories, write_file)
             return vehicles_to_categories
 
 def get_category(vehicle_name):
     try:
-        with open('vehicles_to_categories.pickle', 'r') as pickle_in:
-            vehicles_to_categories = pickle.load(pickle_in)
+        with open('vehicles_to_categories.json', 'r') as read_file:
+            vehicles_to_categories = json.load(read_file)
     except FileNotFoundError:
         vehicles_to_categories = get_vehicles_to_categories();
     
@@ -481,7 +480,6 @@ if __name__ == "__main__":
     ocr_core( name_of_vehicle_images)
 
     input('* Finished Press Enter to Close Program *')
-
 
 
 
