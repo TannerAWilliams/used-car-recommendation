@@ -9,5 +9,5 @@ CarGenerationsImages/
 # log files
 logs/
 
-# pickle file
-*.pickle
+# json file
+*.json
