@@ -1,9 +1,11 @@
 # TODO
 # 1. Get/Retrieve/e Average Relibility Score of Car
+#   a. Use OCR library for formatted data
 # 2. Get Manufacter Relibility Score
 # 3. Image to Text    
     # a. Format the Text Data
 # 4. Insert Data into Sqlite
+#   a. Think about changing all data to upper case
 
 # 5. Analysis of Cars
 # Multi-Criteria Decision Analysis
@@ -40,7 +42,6 @@ import time
 import sqlite3
 import json
 import re
-# import colorama
 
 def delete_all_files():
     # delete car folders
@@ -52,12 +53,13 @@ def delete_all_files():
         for name in files:
             if(name.endswith(".json")):
                 os.remove(os.path.join(root, name))
-                logging.debug('Deleted %s', name)
+                logging.info('Deleted %s', name)
     
-def should_update_images():
+def should_scrape_images():
     try:
         with open('last_modified_date.json', 'r') as read_file:
             last_updated_date = json.load(read_file)
+        
         last_modified_date = get_last_modified_date()
         if last_modified_date != last_updated_date:
             delete_all_files()
@@ -78,7 +80,6 @@ def should_update_images():
         return False
 
 
-# TODO - Get more websites
 # Get the date the website was last modified
 def get_last_modified_date():
     # Get Date from Site Map Index XML
@@ -106,92 +107,114 @@ def get_last_modified_date():
     return most_recent_date
 
 
-def save_new_images():
-    # Ask your if they want separate folder for each manufactuer
-    #should_create_separate_folders = ask_for_user_response()
-    create_folders = False
-    # saved images by getting makes, models, and associated images of cars
-    saved_average_images, saved_car_images   = save_quality_index_rating_images(create_folders)
-    with open('saved_images_names.json', 'w') as write_file:
-        json.dump(saved_average_images, write_file)
-        json.dump(saved_car_images, write_file)
-        return saved_average_images, saved_car_images
-
-
-def ask_for_user_response():
-    response = str(input(
-        "Would you like to save the car quality index rating images into separate folders by make? [Y / n]: ")).lower()
-    create_folders = False
-    if response in ("t", "true", "y", "yes"):
-        create_folders = True
-    
-    return create_folders
-
-
-def get_saved_images_names():
+def get_saved_car_images(images_json):
     try:
-        with open('saved_images_names.json', 'r') as read_file:
+        with open(images_json, 'r') as read_file:
             images_names = json.load(read_file)
-            images_names2 = json.load(read_file)
-            return images_names, images_names2
+            return images_names
     except Exception as e:
         logging.error(
             "Unable to get the filepath and name of images saved. Error Message: %s", str(e))
-        return None
-
-
-def create_folders(directories):
-    for folder in directories:
-        if not os.path.exists(f'{folder}'):
-            path = f'{folder}'
-            os.mkdir(path)
+        print("Error: Could not get image names. Check logs.")
+        exit()
 
 
 def save_image(url, filename):
-    #Always overwrite.
+    # create folder if it does not exist
+    folder = filename.split('\\')[0]
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    
     try:
         urllib.request.urlretrieve(url, filename)
-        logging.debug("Filename: %s", filename)
+        logging.info("Saving filename: %s", filename)
         return True
     except Exception as e:
-        logging.error('Failed: %s \tCould not save_image.', str(e))
+        logging.error('Failed: %s. Could not save image: %s.', str(e), filename)
         return False
 
 
-# Save Image
-def save_quality_index_rating_images(have_folders):
-    makes_models = get_makes_to_models()
-
-    # Create folders
-    directories = ['OverallCarImages', 'CarGenerationsImages']
-    create_folders(directories)
+def save_car_images(directory, file_name):
+    makes_to_models = get_makes_to_models()
 
     print("Retrieving Images...")
-    saved_averages = list()
     saved_cars = list()
-    for make, models in makes_models.items():
+    for make, models in makes_to_models.items():
         print('\t', make)
         for model in models:
-            # Get url of images
-            average_car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIRGeneration.png?v=4'
-            car_generations_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png?v=4'
-            if(make == "ISUZU"):
-                average_car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png'
-                car_generations_png_url = average_car_png_url
-
+            # Get url of car image
+            car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIRGeneration.png?v=4'
+            if('Overall' in directory):
+                # Replace with url of overall car image
+                car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png?v=4'
+            if(make == 'ISUZU'):
+                car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png'
+                
             # Get name of file and path
-            average_car_filename = f'{directories[0]}\{make}_{model}.png'
-            car_filename = f'{directories[1]}\{make}_{model}.png'
+            car_filename = f'{directory}\{make}_{model}.png'
 
             # save images based on url and filename
-            average_car_image_saved = save_image(average_car_png_url, car_filename)
-            car_image_saved = save_image(car_generations_png_url, average_car_filename)
-            
-            if(average_car_image_saved == True):
-               saved_averages.append(average_car_image_saved)
+            car_image_saved = save_image(car_png_url, car_filename)
             if(car_image_saved == True):
                 saved_cars.append(car_filename)
-    return saved_averages, saved_cars
+
+    # Save the file name 
+    with open(file_name, 'w') as write_file:
+            json.dump(saved_cars, write_file)
+    return saved_cars
+
+
+# This section gets every model for each make
+def get_makes_to_models():
+    print("Getting Models...")
+    try:
+        with open("makes_to_models.json", "r") as read_file:
+            makes_to_models = json.load(read_file)
+            logging.info(
+                'Dictionary with Key=Make and Value=Models - %s.', makes_to_models)
+            return makes_to_models
+    except FileNotFoundError:
+        # list of all the makes
+        makes = get_makes()
+        makes_to_models = dict()
+        # go through each make and parse their specific web page
+        for company in makes:
+            models_in_make = list()
+            url = f'http://www.dashboard-light.com/reports/{company}.html'
+            page = requests.get(url)
+            soup = BeautifulSoup(page.text, "html.parser")
+            try:
+                if company == 'ISUZU':
+                    models_in_make = ['Amigo', 'Ascender', 'Axiom', 'Axiom', 'Hombre', 'i_Series',
+                                      'Npr', 'Oasis', 'Pickup', 'Rodeo', 'Spacecab', 'Trooper', 'VehiCROSS']
+                if company == 'Land_Rover':
+                    models_in_make = [
+                        'Defender', 'Discovery', 'Freelander', 'LR2', 'LR3', 'LR4', 'Range_Rover']
+
+                # Go to section where the models are located
+                for div in soup.findAll('div', class_='article'):
+                    for links in div.find_all('a'):
+                        text = links.contents[0]
+                        # checks if text contains the company
+                        is_a_model = text.find(company)
+                        if(is_a_model == 0):
+                            # format text
+                            current_model = text[len(company)+1:]
+                            current_model = current_model.replace(' ', '_')
+                            current_model = current_model.replace('/', '_')
+                            logging.info('Scraped - Make: %s. Model: %s.',
+                                          company, current_model)
+                            models_in_make.append(current_model)
+                logging.info('Make - %s. Models - %s.',
+                             company, models_in_make)
+                makes_to_models[company] = models_in_make
+            except Exception as e:
+                logging.error(
+                    "Unable to get Models. Error Message: %s", str(e))
+        with open('makes_to_models.json', 'w') as write_file:
+            json.dump(makes_to_models, write_file)
+            return makes_to_models
+
 
 
 # InsufficientData, Chronic Reliability Issues, Well Below Average, Below Average
@@ -220,7 +243,7 @@ def get_makes():
                     html_index = full_url.find(".html")
                     if(html_index != -1):
                         make = full_url[18:html_index]
-                        logging.debug("Make: %s", make)
+                        logging.info("Scraped: Make: %s", make)
                         makes.append(make)
         except Exception as e:
             logging.error(
@@ -231,59 +254,7 @@ def get_makes():
             return makes
 
 
-# This section gets every model for each make
-def get_makes_to_models():
-    print("Getting Models...")
-    try:
-        with open("makes_to_models.json", "r") as read_file:
-            makes_to_models = json.load(read_file)
-            logging.info(
-                'Dictionary with Key=Make and Value=Models - %s.', makes_to_models)
-            return makes_to_models
-    except FileNotFoundError:
-        # list of all the makes
-        makes = get_makes()
-        makes_to_models = dict()
-        # go through each make and parse their specific web page
-        for company in makes:
-            models_in_make = list()
-            url = f'http://www.dashboard-light.com/reports/{company}.html'
-            page = requests.get(url)
-            soup = BeautifulSoup(page.text, "html.parser")
-            try:
-                # TODO: Fix the hard coding of ISUZU & Land Rover
-                if company == 'ISUZU':
-                    models_in_make = ['Amigo', 'Ascender', 'Axiom', 'Axiom', 'Hombre', 'i_Series',
-                                      'Npr', 'Oasis', 'Pickup', 'Rodeo', 'Spacecab', 'Trooper', 'VehiCROSS']
-                if company == 'Land_Rover':
-                    models_in_make = [
-                        'Defender', 'Discovery', 'Freelander', 'LR2', 'LR3', 'LR4', 'Range_Rover']
-
-                # Go to section where the models are located
-                for div in soup.findAll('div', class_='article'):
-                    for links in div.find_all('a'):
-                        text = links.contents[0]
-                        # checks if text contains the company
-                        is_a_model = text.find(company)
-                        if(is_a_model == 0):
-                            # format text
-                            current_model = text[len(company)+1:]
-                            current_model = current_model.replace(' ', '_')
-                            current_model = current_model.replace('/', '_')
-                            logging.debug('Make: %s. Model: %s.',
-                                          company, current_model)
-                            models_in_make.append(current_model)
-                logging.info('Make - %s. Models - %s.',
-                             company, models_in_make)
-                makes_to_models[company] = models_in_make
-            except Exception as e:
-                logging.error(
-                    "Unable to get Models. Error Message: %s", str(e))
-        with open('makes_to_models.json', 'w') as write_file:
-            json.dump(makes_to_models, write_file)
-            return makes_to_models
-
-
+# TODO. Look into this method I think it may not work.
 # The method returns a dictionary with every car nd their corresponding category
 def get_categories_to_subdirectories():
     try:
@@ -305,7 +276,7 @@ def get_categories_to_subdirectories():
                     if(index != -1):
                         subdirectory = attribute[18:index-6]
                         category = attribute[index+1:-4]
-                        logging.debug("Category: %s", category)
+                        logging.info("Scraped - Category: %s", category)
                         car_categories_to_subdirectories[category] = subdirectory
         except Exception as e:
             logging.error(
@@ -322,7 +293,7 @@ def get_cars_to_categories():
         with open('cars_to_categories.json', 'r') as read_file:
             cars_to_categories = json.load(read_file)
             logging.info(
-                'Dictionary of Cars to Categories - %s.', cars_to_categories)
+                'Dictionary of Cars to Categories: %s.', cars_to_categories)
             return cars_to_categories
     except FileNotFoundError:
         # list of all the makes
@@ -339,7 +310,7 @@ def get_cars_to_categories():
                     index = attribute.find('>')
                     if(index != -1):
                         car = attribute[index+1:-4].upper()
-                        logging.debug("Car: %s", car)
+                        logging.info("Scraped - Car: %s", car)
                         cars_to_categories[car] = category
             except Exception as e:
                 logging.error(
@@ -347,6 +318,7 @@ def get_cars_to_categories():
         with open("cars_to_categories.json", "w") as write_file:
             json.dump(cars_to_categories, write_file)
             return cars_to_categories
+
 
 def get_category(car_name):
     try:
@@ -358,41 +330,73 @@ def get_category(car_name):
     return cars_to_categories[car_name]
 
 
-def set_car_to_average_rating(filenames_list):
-    print("Converting Images to Text")
+def set_car_to_overall_rating(filenames_list):
+    print("Converting Overall Rating Images to Text")
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-    for average_image in filenames_list:
+    for overall_image in filenames_list:
         try:
-            image_path = os.getcwd() + '\\' + average_image
+            car_name = overall_image.split('\\')[1][:-4]
+            make = car_name.split('_')[0]
+            model = car_name.split('_')[1]
+            print(f'{make} {model}')
+            logging.info('%s %s', make, model)
+
+            image_path = os.getcwd() + '\\' + overall_image
             text = pytesseract.image_to_string(Image.open(image_path))
+
+            description, reliability_score = filter_description_reliability_score(text)
+            logging.info("\t Description: %s. Score %s.", description, text)
             
-            formatted_data = get_formatted_data(text)
-            logging.info("%s: %s", image_path, text)
+            #TODO. create make_model_to_overall_description data
+            #TODO. dictionary with key(string)= Honda Accord and value(float)=82.4;  make_model_to_overall_reliability_score.
         except Exception as e:
             logging.error(
-                "Unable to convert image:%s to text. Exception: %s", str(e))
+                "Unable to convert image:%s to text. Exception: %s.", str(e))
 
-##TODO
-def extract_text(average_car_text):
-    make = str()
-    model = str()
-    make_model = str()
-    car_average_reliability_score = 0
-    
-    #TODO
-    # car_rating_average
-    # manufacturer_quality_index_rating (DICTIONARY: KEY make, VALUE score) 
+
+def filter_description_reliability_score(car_text):
+    # 'Chronic Reliability Issues'
+    # 'Score: None'
+    description = None
+    reliability_score = None
 
     # Convert strings to list. Then remove blank strings and spaces from list.
-    lines = average_car_text.splitlines()
+    lines = car_text.splitlines()
     lines = list(filter(lambda word: word != '', lines))
     lines = list(filter(lambda word: word != ' ', lines))
 
-    # Go through each line of car text and extract relevant data
-    car_name = lines[0]
-    make = car_name.split()[0]
-    model = car_name.split()[1]
+    for line in lines:
+        # Car Description
+        if line in get_descriptors():
+            description = line
+        # Reliability Score
+        elif 'Score' in line:
+            score = line[7:]
+            last_character = score[-1]
+            if (last_character == '.' or last_character == ','):
+                score = score[:-1]
+
+            if(score == 'None'):
+                reliability_score = -2.0
+            else:
+                reliability_score = float(score)
+                if(reliability_score > 100):
+                     reliability_score = -1.0
+
+    # TODO. Call another OCR Library
+    if reliability_score == None or reliability_score == -1.0:
+        print("Call other OCR library")   
+
+    return description, reliability_score
+
+    # TODO. Insert a row per generation or per year
+     # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, car_rating_average REAL, manufacturer_quality_index_rating REAL
+    # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufacturer_rating)
+   
+    
+    # Todo make sure this works by inserting data into text file
+    # then store values into database
 
 # TODO
 # Scans words from image
@@ -413,73 +417,22 @@ def ocr_core(filenames_list):
                 "Unable to convert image:%s to text. Exception: %s", image, str(e))
 
 
-
-# TODO - Create a fuction that text the pytesseract text and format is to a list
-def get_formatted_data(car_text):
-    years = list()
-    reliability_scores = list()
-    descriptions = list()
-    make = str()
-    model = str()
-    car_category = str()
-    car_average_reliability_score = str()
-    manufacturer_rating = str()
-    
-    #TODO
-    # car_rating_average
-    # manufacturer_quality_index_rating (DICTIONARY: KEY make, VALUE score) 
-
-    # Convert strings to list. Then remove blank strings and spaces from list.
-    lines = car_text.splitlines()
-    lines = list(filter(lambda word: word != '', lines))
-    lines = list(filter(lambda word: word != ' ', lines))
-
-    # Go through each line of car text and extract relevant data
-    car_name = lines[0]
-    make = car_name.split()[0]
-    model = car_name.split()[1]
-    car_category = get_category(car_name.upper()) #IMPROVEMENT: Make categories, make model, global variables. Look about namespaces in python
-    #TODO
-    # car_rating_average REAL
-    # manufacturer_quality_index_rating REAL
-
-    # TODO determine which info I want to add to database
-    for line in lines:
-        # Car Description
-        if line in get_descriptors():
-            descriptions.append(line)
-        # Years
-        if '-' in line:
-            generation = line[:9]
-            years.append(generation)
-        # Reliability Score
-        if 'Score' in line:
-            score = line[19:]
-            reliability_scores.append(score)
-    print(car_name)
-
-    # TODO. Insert a row per generation or per year
-     # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, car_rating_average REAL, manufacturer_quality_index_rating REAL
-    # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufacturer_rating)
-   
-    
-    # Todo make sure this works by inserting data into text file
-    # then store values into database
-
-
 if __name__ == "__main__":
-    logging.basicConfig(filename="app.log", filemode='w', level=logging.DEBUG)
+    logging.basicConfig(filename="logs/appplication.log", filemode='w', level=logging.INFO)
 
-    should_update = should_update_images()
-    if(should_update):
-        name_of_average_images, name_of_car_images = save_new_images()
+    should_scrape_images = should_scrape_images()
+    if(should_scrape_images):
+        name_of_overall_car_images = save_car_images('OverallCarImages', 'saved_overall_car_images.json')
+        name_of_car_generations_images = save_car_images('CarGenerationsImages', 'saved_car_generations_images.json')
     else:
-        name_of_average_images, name_of_car_images = get_saved_images_names()
+        name_of_overall_car_images = get_saved_car_images('saved_overall_car_images.json')
+        name_of_car_generations_images = get_saved_car_images('saved_car_generations_images.json')
 
-    set_car_to_average_rating(name_of_average_images)
-    ocr_core( name_of_car_images)
+    # pytersseract 
+    set_car_to_overall_rating(name_of_overall_car_images)
+    
+    # ocr_core(name_of_car_generations_images)
 
-    input('* Finished Press Enter to Close Program *')
 
 
 
