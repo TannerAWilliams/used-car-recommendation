@@ -1,24 +1,32 @@
 # TODO
-# 1. Get/Retrieve/e Average Relibility Score of Car
-#   a. Use OCR library for formatted data
-# 2. Get Manufacter Relibility Score
-# 3. Image to Text    
-    # a. Format the Text Data
-# 4. Insert Data into Sqlite
-#   a. Think about changing all data to upper case
+# 1. Get each Car Generation Relibility Score
+    # a. Image to Text    
+    # b. Format the Text Data
+# 2. Get Car Manufacter Relibility Score
+    # a. Image to Text    
+    # b. Format the Text Data
+# 3. Insert All Data into Sqlite Tables
+#   a. Car Overall Table
+#   b. Car Generations Table
+#   c. Car Manufacters Table
+#   d. Cars Table (Everything) 
+#   e. Think about changing all data to upper case
 
-# 5. Analysis of Cars
-# Multi-Criteria Decision Analysis
+# 4. Analysis of Cars
+#   a. Multi-Criteria Decision Analysis
 
-# 6. Graph Cars
+# 5. Graph Cars
 
-# 7. Implement APIs
+# 6. Implement APIs
 #   a. edmunds.com
 #   b. cars.com
 #   c. cargurus.com
-# 8. Store Used Car Listing on Database
-# 9. Use Multicriteria Optimization to Decide what Cars to Buy
 
+# 7. Store Used Car Listing on Database
+
+# 8. Use Multicriteria Optimization to Decide what Cars to Buy
+
+# 9. Django
 '''
 The Quality Index Rating (QIR)
 
@@ -38,10 +46,11 @@ import urllib.request
 import shutil, os
 import logging
 import pytesseract
-import time
+import time #converting strings to dates
 import sqlite3
 import json
 import re
+import cv2
 
 def delete_all_files():
     # delete car folders
@@ -329,38 +338,38 @@ def get_category(car_name):
     
     return cars_to_categories[car_name]
 
+def get_make_model_from_image(image_path):
+    car_name = image_path.split('\\')[1][:-4].split('_')
+    makes_to_models = get_makes_to_models()
 
-def convert_overall_car_images_to_text(filenames_list):
+    make = car_name[0]
+    if makes_to_models.get(make):
+        model = " ".join(car_name[1:])
+    else:
+        make = " ".join(car_name[:2])
+        model = " ".join(car_name[2:])
+    
+    return make, model
+    logging.info('%s %s', make, model)
+
+
+def convert_overall_car_images_to_text(overall_image):
     print("Converting Overall Rating Images to Text")
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
-    for overall_image in filenames_list:
-        try:
-            car_name = overall_image.split('\\')[1][:-4]
-            make = car_name.split('_')[0]
-            model = car_name.split('_')[1]
-            print(f'{make} {model}')
-            logging.info('%s %s', make, model)
-
-            image_path = os.getcwd() + '\\' + overall_image
-            text = pytesseract.image_to_string(Image.open(image_path))
-
-            description, reliability_score = filter_description_reliability_score(text)
-            logging.info("\t Description: %s. Score %s.", description, text)
-            
-            #TODO. create make_model_to_overall_description data
-            #TODO. dictionary with key(string)= Honda Accord and value(float)=82.4;  make_model_to_overall_reliability_score.
-        except Exception as e:
-            logging.error(
-                "Unable to convert image:%s to text. Exception: %s.", str(e))
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'    
+    try:
+        image_path = os.getcwd() + '\\' + overall_image
+        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        text = pytesseract.image_to_string(img)
+        return text
+    except Exception as e:
+        logging.error(
+            "Unable to convert image:%s to text; Exception: %s;", str(e))
 
 
 def filter_description_reliability_score(car_text):
-    # 'Chronic Reliability Issues'
-    # 'Score: None'
-    description = None
-    reliability_score = None
-
+    overall_reliability_score = None
+    overall_description = None
+    
     # Convert strings to list. Then remove blank strings and spaces from list.
     lines = car_text.splitlines()
     lines = list(filter(lambda word: word != '', lines))
@@ -371,26 +380,26 @@ def filter_description_reliability_score(car_text):
         if line in get_descriptors():
             description = line
         # Reliability Score
-        elif 'Score' in line:
-            score = line[7:]
-            last_character = score[-1]
-            if (last_character == '.' or last_character == ','):
-                score = score[:-1]
-
-            if(score == 'None'):
-                reliability_score = -2.0
+        elif "Score" in line:
+            score = line.split(": ")[1].replace('-','.')
+            if(score in "None"):
+                reliability_score = -1.0
             else:
                 reliability_score = float(score)
-                if(reliability_score > 100):
-                     reliability_score = -1.0
 
-    # TODO. Call another OCR Library
-    if reliability_score == None or reliability_score == -1.0:
-        print("Call other OCR library")   
+    logging.info("\t Score: %s; Description: %s;", overall_reliability_score, overall_description)
+    return reliability_score, description
 
-    return description, reliability_score
 
-    
+def insert_overall_car_data(filenames_list):
+    for overall_image in filenames_list:
+        text = convert_overall_car_images_to_text(overall_image)
+        reliability_score, description = filter_description_reliability_score(text)
+        make, model = get_make_model_from_image(overall_image)
+        #TODO. insert data
+            #TODO. dictionary with key(string)= Honda Accord and value(oatoat)=82.4;  
+            # make_model_to_overall_reliability_score.
+
 
 # TODO
 # Scans words from image
@@ -403,7 +412,8 @@ def convert_car_generations_images_to_text(filenames_list):
     for image in filenames_list:
         try:
             image_path = os.getcwd() + '\\' + image
-            text = pytesseract.image_to_string(Image.open(image_path))
+            img = cv2.imread(image_path)
+            text = pytesseract.image_to_string(img)
             # formatted_data = get_formatted_data(text)
             # insert_data_to_table()
             logging.info("%s: %s", image_path, text)
@@ -431,9 +441,9 @@ if __name__ == "__main__":
         name_of_overall_car_images = get_saved_car_images('saved_overall_car_images.json')
         name_of_car_generations_images = get_saved_car_images('saved_car_generations_images.json')
 
-    # pytersseract 
-    convert_overall_car_images_to_text(name_of_overall_car_images)
-    convert_car_generations_images_to_text(name_of_car_generations_images)
+    # TODO: Manufacter reliability score
+    insert_overall_car_data(name_of_overall_car_images) # TODO
+    convert_car_generations_images_to_text(name_of_car_generations_images) 
    
 
 
