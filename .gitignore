@@ -3,11 +3,11 @@
 env/
 
 # Image Directories
-OverallCarImages/
-CarGenerationsImages/
+images/
 
 # log files
 logs/
 
 # json files
+resources/
 *.json

@@ -42,7 +42,6 @@ from bs4 import BeautifulSoup
 from PIL import Image
 from pathlib import Path
 import requests
-import urllib.request
 import shutil, os
 import logging
 import pytesseract
@@ -54,8 +53,8 @@ import cv2
 
 def delete_all_files():
     # delete car folders
-    shutil.rmtree("CarGenerationsImages", ignore_errors=True)
-    shutil.rmtree("OverallCarImages", ignore_errors=True)
+    shutil.rmtree("GenerationsImages", ignore_errors=True)
+    shutil.rmtree("OverallImages", ignore_errors=True)
     # delete pickle files
     top = os.getcwd()
     for root, dirs, files in os.walk(top, topdown=False):
@@ -64,7 +63,7 @@ def delete_all_files():
                 os.remove(os.path.join(root, name))
                 logging.info('Deleted %s', name)
     
-def should_scrape_images():
+def should_download_images():
     try:
         with open('last_modified_date.json', 'r') as read_file:
             last_updated_date = json.load(read_file)
@@ -101,7 +100,7 @@ def get_last_modified_date():
     rankings_request = requests.get('http://dashboard-light.com/rankings.html')
     rankings_soup = BeautifulSoup(rankings_request.text, "html.parser")
     rankings_last_updated = rankings_soup.find_all(
-        'p')[1].string[-10:]  # .string[14:]
+        'p')[1].string[14:]
 
     # Convert String to Dates
     xml_site_map_date = time.strptime(xml_site_map_last_mod, "%Y-%m-%d")
@@ -116,7 +115,7 @@ def get_last_modified_date():
     return most_recent_date
 
 
-def get_saved_car_images(images_json):
+def get_saved_images(images_json):
     try:
         with open(images_json, 'r') as read_file:
             images_names = json.load(read_file)
@@ -127,60 +126,62 @@ def get_saved_car_images(images_json):
         print("Error: Could not get image names. Check logs.")
         exit()
 
+# For every make and model
+# 1. Get car image urls
+# 2. save image
+# 3. write the filepath of image to json
+def save_images(directory, write_json):
+    makes_to_models = get_makes_to_models()
 
-def save_image(url, filename):
+    print("Retrieving Images...")
+    saved_filepaths = list()
+    for make, models in makes_to_models.items():
+        print('\t', make)
+        for model in models:
+            if('Overall' in directory):
+                # Replace with url of overall car image
+                image_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png?v=4'
+                if(make == 'ISUZU'):
+                    image_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png'
+            else:
+                # Get car generation image url
+                image_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIRGeneration.png?v=4'
+                if(make == 'ISUZU'):
+                   break
+
+            # Intended filepath of car image
+            filepath = f'{directory}\{make}_{model}.png'
+            # save images based on url and filepath
+            image_saved = download_image(image_url, filepath)
+            if(image_saved == True):
+                saved_filepaths.append(filepath)
+
+    # Write the file with passed in name
+    with open(write_json, 'w') as write_file:
+            json.dump(saved_filepaths, write_file)
+    
+    return saved_filepaths
+
+def download_image(url, filepath):
     # create folder if it does not exist
-    folder = filename.split('\\')[0]
+    folder = filepath.split('\\')[0]
     if not os.path.isdir(folder):
         os.makedirs(folder)
     
     try:
-        urllib.request.urlretrieve(url, filename)
-        logging.info("Saving filename: %s", filename)
+        downloaded_file = requests.get(url)
+        open(filepath, 'wb').write(downloaded_file.content)
+        logging.info("Saving filename: %s", filepath)
         return True
     except Exception as e:
-        logging.error('Failed: %s. Could not save image: %s.', str(e), filename)
+        logging.error('Failed: %s. Could not save image: %s.', str(e), filepath)
         return False
-
-
-def save_car_images(directory, file_name):
-    makes_to_models = get_makes_to_models()
-
-    print("Retrieving Images...")
-    saved_cars = list()
-    for make, models in makes_to_models.items():
-        print('\t', make)
-        for model in models:
-            # Get url of car image
-            car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIRGeneration.png?v=4'
-            if('Overall' in directory):
-                # Replace with url of overall car image
-                car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png?v=4'
-            if(make == 'ISUZU'):
-                car_png_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png'
-                
-            # Get name of file and path
-            car_filename = f'{directory}\{make}_{model}.png'
-
-            # save images based on url and filename
-            car_image_saved = save_image(car_png_url, car_filename)
-            if(car_image_saved == True):
-                saved_cars.append(car_filename)
-
-    # Save the file name 
-    with open(file_name, 'w') as write_file:
-            json.dump(saved_cars, write_file)
-    return saved_cars
-
 
 # This section gets every model for each make
 def get_makes_to_models():
-    print("Getting Models...")
     try:
         with open("makes_to_models.json", "r") as read_file:
             makes_to_models = json.load(read_file)
-            logging.info(
-                'Dictionary with Key=Make and Value=Models - %s.', makes_to_models)
             return makes_to_models
     except FileNotFoundError:
         # list of all the makes
@@ -196,7 +197,7 @@ def get_makes_to_models():
                 if company == 'ISUZU':
                     models_in_make = ['Amigo', 'Ascender', 'Axiom', 'Axiom', 'Hombre', 'i_Series',
                                       'Npr', 'Oasis', 'Pickup', 'Rodeo', 'Spacecab', 'Trooper', 'VehiCROSS']
-                if company == 'Land_Rover':
+                elif company == 'Land_Rover':
                     models_in_make = [
                         'Defender', 'Discovery', 'Freelander', 'LR2', 'LR3', 'LR4', 'Range_Rover']
 
@@ -229,7 +230,7 @@ def get_makes_to_models():
 # InsufficientData, Chronic Reliability Issues, Well Below Average, Below Average
 # Average, Above Average, Well Above Average, Exceptional
 def get_descriptors():
-    return ['InsuffcientData', 'Chronic Reliability Issues', 'Well Below Average', 'Below Average', 'Average', 'Above Average', 'Well Above Average', 'Exceptional']
+    return ['InsufficientData', 'Chronic Reliability Issues', 'Well Below Average', 'Below Average', 'Average', 'Above Average', 'Well Above Average', 'Exceptional']
 
 
 # Get all the makes in the website
@@ -334,9 +335,32 @@ def get_category(car_name):
         with open('cars_to_categories.json', 'r') as read_file:
             cars_to_categories = json.load(read_file)
     except FileNotFoundError:
-        cars_to_categories = get_cars_to_categories();
+        cars_to_categories = get_cars_to_categories()
     
     return cars_to_categories[car_name]
+
+
+def insert_overall_data(filenames_list):
+    for overall_image in filenames_list:
+        text = convert_image_to_text(overall_image)
+        make, model = get_make_model_from_image(overall_image)
+        reliability_score, description = filter_reliability_score_description(text)
+        
+        #TODO. insert data
+            #TODO. dictionary with key(string)= Honda Accord and value(oatoat)=82.4
+            # make_model_to_overall_reliability_score.
+
+
+def convert_image_to_text(overall_image):
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'    
+    try:
+        image_path = os.getcwd() + '\\' + overall_image
+        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        text = pytesseract.image_to_string(img)
+        return text
+    except Exception as e:
+        logging.error("Unable to convert image to text Exception: %s", str(e))
+        return str()
 
 def get_make_model_from_image(image_path):
     car_name = image_path.split('\\')[1][:-4].split('_')
@@ -349,27 +373,14 @@ def get_make_model_from_image(image_path):
         make = " ".join(car_name[:2])
         model = " ".join(car_name[2:])
     
-    return make, model
     logging.info('%s %s', make, model)
+    return make, model
 
 
-def convert_overall_car_images_to_text(overall_image):
-    print("Converting Overall Rating Images to Text")
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'    
-    try:
-        image_path = os.getcwd() + '\\' + overall_image
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        text = pytesseract.image_to_string(img)
-        return text
-    except Exception as e:
-        logging.error(
-            "Unable to convert image:%s to text; Exception: %s;", str(e))
+def filter_reliability_score_description(car_text):    
+    description = str()
+    reliability_score = float()
 
-
-def filter_description_reliability_score(car_text):
-    overall_reliability_score = None
-    overall_description = None
-    
     # Convert strings to list. Then remove blank strings and spaces from list.
     lines = car_text.splitlines()
     lines = list(filter(lambda word: word != '', lines))
@@ -386,64 +397,49 @@ def filter_description_reliability_score(car_text):
                 reliability_score = -1.0
             else:
                 reliability_score = float(score)
+                if(reliability_score > 100):
+                    reliability_score = reliability_score / 10
 
-    logging.info("\t Score: %s; Description: %s;", overall_reliability_score, overall_description)
+    logging.info("\t Score: %s | Car Description: %s", reliability_score, description)
     return reliability_score, description
 
 
-def insert_overall_car_data(filenames_list):
+# TODO
+def insert_generation_data(filenames_list):
     for overall_image in filenames_list:
-        text = convert_overall_car_images_to_text(overall_image)
-        reliability_score, description = filter_description_reliability_score(text)
+        text = convert_image_to_text(overall_image)
         make, model = get_make_model_from_image(overall_image)
-        #TODO. insert data
-            #TODO. dictionary with key(string)= Honda Accord and value(oatoat)=82.4;  
+        # TODO. filter relevant information.
+        # TODO. insert data
+            #TODO. dictionary with key(string)= Honda Accord and value(oatoat)=82.4 
             # make_model_to_overall_reliability_score.
 
 
-# TODO
-# Scans words from image
-# Return a list of lists.
-#   i.e. Each list with be each individual cars relevant information
-def convert_car_generations_images_to_text(filenames_list):
-    print("Converting Images to Text")
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# def get_formatted_data(text):
 
-    for image in filenames_list:
-        try:
-            image_path = os.getcwd() + '\\' + image
-            img = cv2.imread(image_path)
-            text = pytesseract.image_to_string(img)
-            # formatted_data = get_formatted_data(text)
-            # insert_data_to_table()
-            logging.info("%s: %s", image_path, text)
-        except Exception as e:
-            logging.error(
-                "Unable to convert image:%s to text. Exception: %s", image, str(e))
-
-#def get_formatted_data(text):
-
-#def insert_data_to_table():   
-
+# def insert_data_to_table():   
     # TODO. Insert a row per generation or per year
         # make TEXT, model TEXT, year INTEGER, category TEXT, reliability_score REAL, overview TEXT, car_rating_average REAL, manufacturer_quality_index_rating REAL
     # insert_car_data_into_database(reliability_scores, years, make, model, descriptions, car_category, car_average_reliability_score, manufacturer_rating)
     
 
 if __name__ == "__main__":
+    print("Running...")
     logging.basicConfig(filename="logs/appplication.log", filemode='w', level=logging.INFO)
 
-    should_scrape_images = should_scrape_images()
+    should_scrape_images = should_download_images()
     if(should_scrape_images):
-        name_of_overall_car_images = save_car_images('OverallCarImages', 'saved_overall_car_images.json')
-        name_of_car_generations_images = save_car_images('CarGenerationsImages', 'saved_car_generations_images.json')
+        name_of_overall_images = save_images('OverallImages', 'saved_overall_images.json')
+        name_of_generation_images = save_images('GenerationImages', 'saved_generation_images.json')
     else:
-        name_of_overall_car_images = get_saved_car_images('saved_overall_car_images.json')
-        name_of_car_generations_images = get_saved_car_images('saved_car_generations_images.json')
+        name_of_overall_images = get_saved_images('saved_overall_images.json')
+        name_of_generation_images = get_saved_images('saved_generation_images.json')
 
     # TODO: Manufacter reliability score
-    insert_overall_car_data(name_of_overall_car_images) # TODO
-    convert_car_generations_images_to_text(name_of_car_generations_images) 
+    insert_overall_data(name_of_overall_images) # TODO
+    #convert_generation_images_to_text(name_of_generation_images) 
+
+    print("*** Done ***")
    
 
 
