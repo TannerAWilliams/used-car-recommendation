@@ -1,7 +1,7 @@
 ====================
 Used Car Recommendar 
 ====================
-Website for recommending used cars to you based on user's criteria  
+Website for recommending used cars to based on user's criteria  
 ------------------------------------------------------------------
 
 Backlog
