@@ -1,9 +1,6 @@
-===============
-Used Car Search 
-===============
-
-Used Car Buying Guide
-=====================
+====================
+Used Car Recommendar 
+====================
 Website for recommending used cars to you based on user's criteria  
 ------------------------------------------------------------------
 
