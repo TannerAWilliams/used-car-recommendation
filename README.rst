@@ -8,15 +8,15 @@ Website for recommending used cars to you based on user's criteria
 
 
 
-** Backlog
+* Backlog
 1. Get each Car Generation Relibility Score
-    # a. Image to Text    
-    # b. Format the Text Data
+    a. Image to Text    
+    b. Format the Text Data
 2. Get Car Manufacter Relibility Score
-    # a. Image to Text    
-    # b. Format the Text Data
+    a. Image to Text    
+    b. Format the Text Data
 3. Insert All Data into Sqlite Tables
-    a. Car Overall Table
+   a. Car Overall Table
    b. Car Generations Table
    c. Car Manufacters Table
    d. Cars Table (Everything) 
