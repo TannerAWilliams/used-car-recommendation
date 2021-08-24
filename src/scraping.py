@@ -3,7 +3,7 @@ import json
 import shutil
 import os
 import logging
-import time #converting strings to dates
+import time  # converting strings to dates
 
 # Third party imports
 from bs4 import BeautifulSoup
@@ -20,7 +20,7 @@ def delete_all_files():
     top = os.getcwd()
     for root, dirs, files in os.walk(top, topdown=False):
         for name in files:
-            if(name.endswith(".json")):
+            if name.endswith(".json"):
                 os.remove(os.path.join(root, name))
                 logging.info('Deleted %s', name)
 
@@ -29,7 +29,7 @@ def should_download_images():
     try:
         with open('resources/last_modified_date.json', 'r') as read_file:
             last_updated_date = json.load(read_file)
-        
+
         last_modified_date = get_last_modified_date()
         if last_modified_date != last_updated_date:
             delete_all_files()
@@ -99,28 +99,28 @@ def save_images(directory, write_json):
             print("yo")
         print('\t', make)
         for model in models:
-            if('overall' in directory):
+            if 'overall' in directory:
                 # Replace with url of overall car image
                 image_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png?v=4'
-                if(make == 'ISUZU'):
+                if make == 'ISUZU':
                     image_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIR.png'
             else:
                 # Get car generation image url
                 image_url = f'http://www.dashboard-light.com/vehicles/Resources/Images/{make}/{model}/QIRGeneration.png?v=4'
-                if(make == 'ISUZU'):
-                   break
+                if make == 'ISUZU':
+                    break
 
             # Intended filepath of car image
             filepath = f'{directory}\{make}_{model}.png'
             # save images based on url and filepath
             image_saved = download_image(image_url, filepath)
-            if(image_saved == True):
+            if image_saved == True:
                 saved_filepaths.append(filepath)
 
     # Write the file with passed in name
     with open(write_json, 'w') as write_file:
-            json.dump(saved_filepaths, write_file)
-    
+        json.dump(saved_filepaths, write_file)
+
     return saved_filepaths
 
 
@@ -136,7 +136,7 @@ def download_image(url, filepath):
         create_folder(filepath)
 
         # Don't download image if it already exists
-        if(os.path.exists(filepath)):
+        if os.path.exists(filepath):
             return False
         else:
             downloaded_file = requests.get(url)

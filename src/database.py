@@ -1,9 +1,6 @@
 # Standard library imports
-import logging
-import sqlite3
 
 # Local application imports
-import database
 import cars
 import ocr
 
@@ -54,7 +51,7 @@ def insert_generation_data(filenames_list):
 # Model Name
 # Description
 # Car Type
-# Manufactor Score
+# Manufacture Score
 #
 
 # Table Called - summary
@@ -88,8 +85,8 @@ def insert_generation_data(filenames_list):
 # Multi-Criteria Decision Analysis
 # Multi-Objective Optimization
 # Vector Optimization
-# Multicriteria Optimization
-# Multiattribute optimization
+# Multi-criteria Optimization
+# Multi-attribute optimization
 # Pareto optimization
 # Models
 # Weighted Sum Model

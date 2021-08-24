@@ -26,7 +26,7 @@ def get_makes():
                 for links in div.find_all('a'):
                     full_url = str(links)
                     html_index = full_url.find(".html")
-                    if(html_index != -1):
+                    if (html_index != -1):
                         make = full_url[18:html_index]
                         logging.info("Scraped: Make: %s", make)
                         makes.append(make)
@@ -69,13 +69,13 @@ def get_makes_to_models():
                         text = links.contents[0]
                         # checks if text contains the company
                         is_a_model = text.find(company)
-                        if(is_a_model == 0):
+                        if (is_a_model == 0):
                             # format text
-                            current_model = text[len(company)+1:]
+                            current_model = text[len(company) + 1:]
                             current_model = current_model.replace(' ', '_')
                             current_model = current_model.replace('/', '_')
                             logging.info('Scraped - Make: %s. Model: %s.',
-                                          company, current_model)
+                                         company, current_model)
                             models_in_make.append(current_model)
                 logging.info('Make - %s. Models - %s.',
                              company, models_in_make)
@@ -94,7 +94,7 @@ def get_category(car_name):
             cars_to_categories = json.load(read_file)
     except FileNotFoundError:
         cars_to_categories = get_cars_to_categories()
-    
+
     return cars_to_categories[car_name]
 
 
@@ -117,9 +117,9 @@ def get_categories_to_subdirectories():
                 for hyperlinks in div.find_all('a'):
                     attribute = str(hyperlinks)
                     index = attribute.find(">")
-                    if(index != -1):
-                        subdirectory = attribute[18:index-6]
-                        category = attribute[index+1:-4]
+                    if (index != -1):
+                        subdirectory = attribute[18:index - 6]
+                        category = attribute[index + 1:-4]
                         logging.info("Scraped - Category: %s", category)
                         car_categories_to_subdirectories[category] = subdirectory
         except Exception as e:
@@ -152,8 +152,8 @@ def get_cars_to_categories():
                 for a in soup.find_all(href=re.compile("vehicles")):
                     attribute = str(a)
                     index = attribute.find('>')
-                    if(index != -1):
-                        car = attribute[index+1:-4].upper()
+                    if (index != -1):
+                        car = attribute[index + 1:-4].upper()
                         logging.info("Scraped - Car: %s", car)
                         cars_to_categories[car] = category
             except Exception as e:
@@ -167,7 +167,8 @@ def get_cars_to_categories():
 # InsufficientData, Chronic Reliability Issues, Well Below Average, Below Average
 # Average, Above Average, Well Above Average, Exceptional
 def get_descriptors():
-    return ['InsufficientData', 'Chronic Reliability Issues', 'Well Below Average', 'Below Average', 'Average', 'Above Average', 'Well Above Average', 'Exceptional']
+    return ['InsufficientData', 'Chronic Reliability Issues', 'Well Below Average', 'Below Average', 'Average',
+            'Above Average', 'Well Above Average', 'Exceptional']
 
 
 def get_make_model_from_image(image_path):
@@ -180,6 +181,6 @@ def get_make_model_from_image(image_path):
     else:
         make = " ".join(car_name[:2])
         model = " ".join(car_name[2:])
-    
+
     logging.info('%s %s', make, model)
     return make, model

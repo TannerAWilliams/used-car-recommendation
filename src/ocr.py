@@ -3,7 +3,7 @@ import logging
 import os
 
 # Third party imports
-import cv2
+import cv2  # Support for OpenCV image
 import pytesseract
 
 # Local application imports
@@ -11,7 +11,7 @@ import cars
 
 
 def convert_image_to_text(overall_image):
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'    
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
     try:
         image_path = os.getcwd() + '\\' + overall_image
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -22,7 +22,7 @@ def convert_image_to_text(overall_image):
         return str()
 
 
-def filter_reliability_score_description(car_text):    
+def filter_reliability_score_description(car_text):
     description = str()
     reliability_score = float()
 
@@ -37,12 +37,12 @@ def filter_reliability_score_description(car_text):
             description = line
         # Reliability Score
         elif "Score" in line:
-            score = line.split(": ")[1].replace('-','.')
-            if(score in "None"):
+            score = line.split(": ")[1].replace('-', '.')
+            if (score in "None"):
                 reliability_score = -1.0
             else:
                 reliability_score = float(score)
-                if(reliability_score > 100):
+                if (reliability_score > 100):
                     reliability_score = reliability_score / 10
 
     logging.info("\t Score: %s | Car Description: %s", reliability_score, description)
